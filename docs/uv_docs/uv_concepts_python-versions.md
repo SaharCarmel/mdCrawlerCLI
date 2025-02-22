@@ -1,0 +1,203 @@
+Skip to content 
+# Python versions
+A Python version is composed of a Python interpreter (i.e. the `python` executable), the standard library, and other supporting files.
+## Managed and system Python installations
+Since it is common for a system to have an existing Python installation, uv supports discovering Python versions. However, uv also supports installing Python versions itself. To distinguish between these two types of Python installations, uv refers to Python versions it installs as _managed_ Python installations and all other Python installations as _system_ Python installations.
+Note
+uv does not distinguish between Python versions installed by the operating system vs those installed and managed by other tools. For example, if a Python installation is managed with `pyenv`, it would still be considered a _system_ Python version in uv.
+## Requesting a version
+A specific Python version can be requested with the `--python` flag in most uv commands. For example, when creating a virtual environment:
+```
+$ uvvenv--python3.11.6
+
+```
+
+uv will ensure that Python 3.11.6 is available — downloading and installing it if necessary — then create the virtual environment with it.
+The following Python version request formats are supported:
+  * `<version>` e.g. `3`, `3.12`, `3.12.3`
+  * `<version-specifier>` e.g. `>=3.12,<3.13`
+  * `<implementation>` e.g. `cpython` or `cp`
+  * `<implementation>@<version>` e.g. `cpython@3.12`
+  * `<implementation><version>` e.g. `cpython3.12` or `cp312`
+  * `<implementation><version-specifier>` e.g. `cpython>=3.12,<3.13`
+  * `<implementation>-<version>-<os>-<arch>-<libc>` e.g. `cpython-3.12.3-macos-aarch64-none`
+
+
+Additionally, a specific system Python interpreter can be requested with:
+  * `<executable-path>` e.g. `/opt/homebrew/bin/python3`
+  * `<executable-name>` e.g. `mypython3`
+  * `<install-dir>` e.g. `/some/environment/`
+
+
+By default, uv will automatically download Python versions if they cannot be found on the system. This behavior can be disabled with the `python-downloads` option.
+### Python version files
+The `.python-version` file can be used to create a default Python version request. uv searches for a `.python-version` file in the working directory and each of its parents. Any of the request formats described above can be used, though use of a version number is recommended for interoperability with other tools.
+A `.python-version` file can be created in the current directory with the `uv python pin` command.
+Discovery of `.python-version` files can be disabled with `--no-config`.
+uv will not search for `.python-version` files beyond project or workspace boundaries.
+## Installing a Python version
+uv bundles a list of downloadable CPython and PyPy distributions for macOS, Linux, and Windows.
+Tip
+By default, Python versions are automatically downloaded as needed without using `uv python install`.
+To install a Python version at a specific version:
+```
+$ uvpythoninstall3.12.3
+
+```
+
+To install the latest patch version:
+```
+$ uvpythoninstall3.12
+
+```
+
+To install a version that satisfies constraints:
+```
+$ uvpythoninstall'>=3.8,<3.10'
+
+```
+
+To install multiple versions:
+```
+$ uvpythoninstall3.93.103.11
+
+```
+
+To install a specific implementation:
+```
+$ uvpythoninstallpypy
+
+```
+
+All of the Python version request formats are supported except those that are used for requesting local interpreters such as a file path.
+By default `uv python install` will verify that a managed Python version is installed or install the latest version. If a `.python-version` file is present, uv will install the Python version listed in the file. A project that requires multiple Python versions may define a `.python-versions` file. If present, uv will install all of the Python versions listed in the file.
+Important
+The available Python versions are frozen for each uv release. To install new Python versions, you may need upgrade uv.
+### Installing Python executables
+Important
+Support for installing Python executables is in _preview_ , this means the behavior is experimental and subject to change.
+To install Python executables into your `PATH`, provide the `--preview` option:
+```
+$ uvpythoninstall3.12--preview
+
+```
+
+This will install a Python executable for the requested version into `~/.local/bin`, e.g., as `python3.12`.
+Tip
+If `~/.local/bin` is not in your `PATH`, you can add it with `uv tool update-shell`.
+To install `python` and `python3` executables, include the `--default` option:
+```
+$ uvpythoninstall3.12--default--preview
+
+```
+
+When installing Python executables, uv will only overwrite an existing executable if it is managed by uv — e.g., if `~/.local/bin/python3.12` exists already uv will not overwrite it without the `--force` flag.
+uv will update executables that it manages. However, it will prefer the latest patch version of each Python minor version by default. For example:
+```
+$ uvpythoninstall3.12.7--preview# Adds `python3.12` to `~/.local/bin`
+$ uvpythoninstall3.12.6--preview# Does not update `python3.12`
+$ uvpythoninstall3.12.8--preview# Updates `python3.12` to point to 3.12.8
+
+```
+
+## Project Python versions
+uv will respect Python requirements defined in `requires-python` in the `pyproject.toml` file during project command invocations. The first Python version that is compatible with the requirement will be used, unless a version is otherwise requested, e.g., via a `.python-version` file or the `--python` flag.
+## Viewing available Python versions
+To list installed and available Python versions:
+```
+$ uvpythonlist
+
+```
+
+By default, downloads for other platforms and old patch versions are hidden.
+To view all versions:
+```
+$ uvpythonlist--all-versions
+
+```
+
+To view Python versions for other platforms:
+```
+$ uvpythonlist--all-platforms
+
+```
+
+To exclude downloads and only show installed Python versions:
+```
+$ uvpythonlist--only-installed
+
+```
+
+See the `uv python list` reference for more details.
+## Finding a Python executable
+To find a Python executable, use the `uv python find` command:
+```
+$ uvpythonfind
+
+```
+
+By default, this will display the path to the first available Python executable. See the discovery rules for details about how executables are discovered.
+This interface also supports many request formats, e.g., to find a Python executable that has a version of 3.11 or newer:
+```
+$ uvpythonfind>=3.11
+
+```
+
+By default, `uv python find` will include Python versions from virtual environments. If a `.venv` directory is found in the working directory or any of the parent directories or the `VIRTUAL_ENV` environment variable is set, it will take precedence over any Python executables on the `PATH`.
+To ignore virtual environments, use the `--system` flag:
+```
+$ uvpythonfind--system
+
+```
+
+## Discovery of Python versions
+When searching for a Python version, the following locations are checked:
+  * Managed Python installations in the `UV_PYTHON_INSTALL_DIR`.
+  * A Python interpreter on the `PATH` as `python`, `python3`, or `python3.x` on macOS and Linux, or `python.exe` on Windows.
+  * On Windows, the Python interpreters in the Windows registry and Microsoft Store Python interpreters (see `py --list-paths`) that match the requested version.
+
+
+In some cases, uv allows using a Python version from a virtual environment. In this case, the virtual environment's interpreter will be checked for compatibility with the request before searching for an installation as described above. See the pip-compatible virtual environment discovery documentation for details.
+When performing discovery, non-executable files will be ignored. Each discovered executable is queried for metadata to ensure it meets the requested Python version. If the query fails, the executable will be skipped. If the executable satisfies the request, it is used without inspecting additional executables.
+When searching for a managed Python version, uv will prefer newer versions first. When searching for a system Python version, uv will use the first compatible version — not the newest version.
+If a Python version cannot be found on the system, uv will check for a compatible managed Python version download.
+### Python pre-releases
+Python pre-releases will not be selected by default. Python pre-releases will be used if there is no other available installation matching the request. For example, if only a pre-release version is available it will be used but otherwise a stable release version will be used. Similarly, if the path to a pre-release Python executable is provided then no other Python version matches the request and the pre-release version will be used.
+If a pre-release Python version is available and matches the request, uv will not download a stable Python version instead.
+## Disabling automatic Python downloads
+By default, uv will automatically download Python versions when needed.
+The `python-downloads` option can be used to disable this behavior. By default, it is set to `automatic`; set to `manual` to only allow Python downloads during `uv python install`.
+Tip
+The `python-downloads` setting can be set in a persistent configuration file to change the default behavior, or the `--no-python-downloads` flag can be passed to any uv command.
+## Adjusting Python version preferences
+By default, uv will attempt to use Python versions found on the system and only download managed interpreters when necessary.
+The `python-preference` option can be used to adjust this behavior. By default, it is set to `managed` which prefers managed Python installations over system Python installations. However, system Python installations are still preferred over downloading a managed Python version.
+The following alternative options are available:
+  * `only-managed`: Only use managed Python installations; never use system Python installations
+  * `system`: Prefer system Python installations over managed Python installations
+  * `only-system`: Only use system Python installations; never use managed Python installations
+
+
+These options allow disabling uv's managed Python versions entirely or always using them and ignoring any existing system installations.
+Note
+Automatic Python version downloads can be disabled without changing the preference.
+## Python implementation support
+uv supports the CPython, PyPy, and GraalPy Python implementations. If a Python implementation is not supported, uv will fail to discover its interpreter.
+The implementations may be requested with either the long or short name:
+  * CPython: `cpython`, `cp`
+  * PyPy: `pypy`, `pp`
+  * GraalPy: `graalpy`, `gp`
+
+
+Implementation name requests are not case sensitive.
+See the Python version request documentation for more details on the supported formats.
+## Managed Python distributions
+uv supports downloading and installing CPython and PyPy distributions.
+### CPython distributions
+As Python does not publish official distributable CPython binaries, uv instead uses pre-built distributions from the Astral `python-build-standalone` project. `python-build-standalone` is also is used in many other Python projects, like Rye, Mise, and bazelbuild/rules_python.
+The uv Python distributions are self-contained, highly-portable, and performant. While Python can be built from source, as in tools like `pyenv`, doing so requires preinstalled system dependencies, and creating optimized, performant builds (e.g., with PGO and LTO enabled) is very slow.
+These distributions have some behavior quirks, generally as a consequence of portability; and, at present, uv does not support installing them on musl-based Linux distributions, like Alpine Linux. See the `python-build-standalone` quirks documentation for details.
+### PyPy distributions
+PyPy distributions are provided by the PyPy project.
+Back to top 
+![](https://cdn.usefathom.com/?h=https%3A%2F%2Fdocs.astral.sh&p=%2Fuv%2Fconcepts%2Fpython-versions%2F&r=&sid=ESKBRHGN&qs=%7B%7D&cid=52829293)

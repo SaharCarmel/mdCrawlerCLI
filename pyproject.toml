@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mdcrawler"
+version = "0.1.0"
+description = "A CLI tool for crawling documentation websites and converting them to markdown"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "crawl4ai",
+    "pyyaml",
+]
+
+[project.scripts]
+mdcrawler = "mdcrawler.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mdcrawler"]
